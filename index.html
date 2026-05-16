@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TaskMaster Pro 2026 - Ultra Edition</title>
+    <title>TaskMaster Pro 2026 - Save & Load Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -73,7 +73,7 @@
             font-weight: 700;
         }
 
-        /* Right Stat Column (Percentage) */
+        /* Right Stat Column */
         .sticky-stat-right {
             position: sticky; right: 0; z-index: 20;
             background: #f8fff9 !important;
@@ -122,7 +122,8 @@
         }
         .modal-content {
             background: white; padding: 24px; border-radius: 12px;
-            width: 90%; max-width: 400px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            width: 95%; max-width: 500px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            max-height: 90vh; overflow-y: auto;
         }
 
         /* Controls */
@@ -133,14 +134,14 @@
             padding: 5px 12px;
             border-radius: 6px;
             font-size: 12px;
-            width: 200px;
+            width: 180px;
             outline: none;
+            transition: all 0.3s;
         }
         .email-input:focus { background: white; color: var(--excel-primary); }
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        /* Mobile adjustment */
         @media (max-width: 768px) {
             .sticky-col { min-width: 140px !important; }
             .excel-table-container { height: calc(100vh - 240px); }
@@ -156,60 +157,57 @@
             <h1 class="font-extrabold text-lg uppercase tracking-tight leading-none">TaskMaster 2026</h1>
         </div>
 
-        <div class="flex items-center gap-3 mt-2 sm:mt-0">
-            <div class="relative">
-                <input type="email" id="user-email" class="email-input" placeholder="Email Anda..." onchange="handleEmailChange()">
-                <div id="save-indicator" class="absolute -bottom-4 left-0 text-[8px] font-bold text-white opacity-0 transition-opacity uppercase">Tersimpan</div>
+        <div class="flex items-center gap-2 mt-2 sm:mt-0 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+            <div class="relative flex flex-col items-start mr-2">
+                <input type="email" id="user-email" class="email-input" placeholder="Ketik Email Anda..." onchange="handleEmailChange()">
+                <div id="save-indicator" class="text-[9px] font-bold text-green-200 opacity-0 transition-opacity uppercase absolute -bottom-4 left-1">
+                    ☁️ TERSIMPAN
+                </div>
             </div>
             
-            <div class="flex gap-2 bg-black/20 p-1 rounded-lg">
-                <button onclick="exportMenu()" class="p-1.5 hover:bg-white/20 rounded-md" title="Download Data">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                </button>
-                <label class="p-1.5 hover:bg-white/20 rounded-md cursor-pointer" title="Unggah Data">
-                    <input type="file" id="importInput" class="hidden" accept=".json,.csv,.xlsx" onchange="importData(event)">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-                </label>
-            </div>
+            <button onclick="performExport('json')" class="bg-purple-700 hover:bg-purple-600 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-1 border border-purple-500 whitespace-nowrap">
+                📥 Unduh JSON
+            </button>
+            <button onclick="manualSave()" class="bg-emerald-700 hover:bg-emerald-600 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-1 border border-emerald-500 whitespace-nowrap">
+                💾 Simpan
+            </button>
+            <button onclick="openStorageManager()" class="bg-blue-700 hover:bg-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-1 border border-blue-500 whitespace-nowrap">
+                ⚙️ Data & Ekspor
+            </button>
         </div>
     </header>
 
     <!-- Months & Mode -->
     <nav class="bg-white border-b border-[#d2d0ce] px-4 py-1.5 flex items-center justify-between shadow-sm overflow-x-auto no-scrollbar">
-        <div class="flex gap-1">
-            <script>
-                const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
-                months.forEach((m, i) => {
-                    document.write(`<button onclick="switchMonth(${i})" id="btn-month-${i}" class="px-2.5 py-1.5 text-[10px] font-bold rounded-md hover:bg-gray-100 uppercase transition-all whitespace-nowrap">${m}</button>`);
-                });
-            </script>
+        <div id="month-container" class="flex gap-1">
+            <!-- Buttons rendered by JS -->
         </div>
         <div class="flex gap-1 ml-4">
-            <button onclick="toggleEditMode()" id="btn-edit-mode" class="px-3 py-1.5 bg-gray-100 text-[10px] font-bold rounded-md uppercase border border-gray-300">
+            <button onclick="toggleEditMode()" id="btn-edit-mode" class="px-3 py-1.5 bg-gray-100 text-[10px] font-bold rounded-md uppercase border border-gray-300 transition-colors whitespace-nowrap">
                 <span id="label-edit">Kelola Daftar</span>
             </button>
-            <button onclick="showAddModal()" class="px-3 py-1.5 bg-[#107c41] text-white text-[10px] font-bold rounded-md uppercase">+ Tambah</button>
+            <button onclick="showAddModal()" class="px-3 py-1.5 bg-[#107c41] text-white text-[10px] font-bold rounded-md uppercase whitespace-nowrap">+ Tambah</button>
         </div>
     </nav>
 
     <main class="p-2 lg:p-4">
         <!-- Stats Bar -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <div class="bg-white p-3 rounded-xl border-l-4 border-[#107c41] shadow-sm">
+            <div class="bg-white p-3 rounded-xl border-l-4 border-[#107c41] shadow-sm flex flex-col justify-center">
                 <p class="text-[9px] font-black text-gray-400 uppercase mb-1">Skor Bulanan</p>
                 <h2 id="total-percent" class="text-2xl font-black text-[#107c41]">0%</h2>
             </div>
-            <div class="bg-white p-3 rounded-xl border-l-4 border-blue-600 shadow-sm">
+            <div class="bg-white p-3 rounded-xl border-l-4 border-blue-600 shadow-sm flex flex-col justify-center">
                 <p class="text-[9px] font-black text-gray-400 uppercase mb-1">Grade Kualitatif</p>
                 <h2 id="qualitative-grade" class="text-2xl font-black text-blue-700">-</h2>
             </div>
-            <div class="bg-white p-3 rounded-xl border-l-4 border-orange-500 shadow-sm">
+            <div class="bg-white p-3 rounded-xl border-l-4 border-orange-500 shadow-sm flex flex-col justify-center">
                 <p class="text-[9px] font-black text-gray-400 uppercase mb-1">Total Checklist</p>
                 <h2 id="stat-done" class="text-2xl font-black text-orange-600">0</h2>
             </div>
-            <div class="bg-white p-3 rounded-xl border-l-4 border-red-500 shadow-sm overflow-hidden">
-                <p class="text-[9px] font-black text-gray-400 uppercase mb-1">Data Akun</p>
-                <h2 id="data-identity-label" class="text-sm font-black text-red-600 truncate uppercase mt-1">Guest</h2>
+            <div class="bg-white p-3 rounded-xl border-l-4 border-red-500 shadow-sm overflow-hidden flex flex-col justify-center">
+                <p class="text-[9px] font-black text-gray-400 uppercase mb-1">Akun Penyimpanan</p>
+                <h2 id="data-identity-label" class="text-sm font-black text-red-600 truncate uppercase mt-1">Memuat...</h2>
             </div>
         </div>
 
@@ -223,111 +221,289 @@
         </div>
     </main>
 
-    <!-- Modal Add -->
-    <div id="modalAdd" class="modal-overlay">
+    <!-- Modal Storage Manager -->
+    <div id="modalStorage" class="modal-overlay">
         <div class="modal-content">
+            <h3 class="font-extrabold text-gray-800 uppercase text-lg mb-2 flex items-center gap-2">
+                ⚙️ Manajer Penyimpanan & Data
+            </h3>
+            <p class="text-xs text-gray-500 mb-4">Pusat kontrol untuk Save, Load, dan Ekspor data Anda.</p>
+            
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-2 gap-2 mb-4">
+                <button onclick="manualSave()" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 p-3 rounded-lg font-bold text-sm border border-emerald-200 transition-all">
+                    💾 Simpan ke Perangkat
+                </button>
+                <button onclick="manualLoad()" class="bg-blue-100 hover:bg-blue-200 text-blue-800 p-3 rounded-lg font-bold text-sm border border-blue-200 transition-all">
+                    📂 Muat Data Terakhir
+                </button>
+            </div>
+
+            <!-- Export Import Files -->
+            <div class="border-t border-gray-200 pt-4 mb-4">
+                <p class="text-xs font-bold text-gray-400 uppercase mb-2">Unduh / Unggah File Excel</p>
+                <div class="flex gap-2">
+                    <button onclick="performExport('xlsx')" class="flex-1 bg-green-600 text-white p-2 rounded text-xs font-bold shadow-sm">Ekspor .XLSX</button>
+                    <button onclick="performExport('csv')" class="flex-1 bg-gray-700 text-white p-2 rounded text-xs font-bold shadow-sm">Ekspor .CSV</button>
+                    <label class="flex-1 bg-orange-500 text-white p-2 rounded text-xs font-bold text-center cursor-pointer shadow-sm">
+                        Impor File
+                        <input type="file" class="hidden" accept=".json,.csv,.xlsx" onchange="importData(event)">
+                    </label>
+                </div>
+            </div>
+
+            <!-- Raw Data Vault -->
+            <div class="border-t border-gray-200 pt-4">
+                <p class="text-xs font-bold text-gray-400 uppercase mb-2">Brankas Data (Teks Rahasia)</p>
+                <p class="text-[10px] text-gray-500 mb-2">Jika Anda takut data hilang, salin semua teks di bawah ini dan simpan di Notepad. Anda bisa menempelkannya kembali ke sini untuk memulihkan data (Load).</p>
+                <textarea id="rawDataVault" class="w-full h-24 p-2 text-[10px] font-mono border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:outline-none focus:border-blue-500 mb-2"></textarea>
+                <div class="flex gap-2">
+                    <button onclick="copyRawData()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 p-2 rounded text-xs font-bold transition-all">📋 Salin Teks</button>
+                    <button onclick="loadRawData()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded text-xs font-bold transition-all">⬇️ Pulihkan dari Teks</button>
+                </div>
+            </div>
+
+            <button onclick="closeModal('modalStorage')" class="w-full mt-6 p-3 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all">Tutup Manajer</button>
+        </div>
+    </div>
+
+    <!-- Modal Add & Delete (Hidden by default) -->
+    <div id="modalAdd" class="modal-overlay">
+        <div class="modal-content !max-w-sm">
             <h3 class="font-extrabold text-gray-800 uppercase text-base mb-2">Aktivitas Baru</h3>
-            <p class="text-[10px] text-gray-400 font-bold mb-4 uppercase">Tambahkan ke dalam daftar pantauan</p>
             <input type="text" id="newActivityName" class="w-full border-2 border-gray-100 p-3 rounded-xl mb-4 outline-none focus:border-[#107c41] font-bold" placeholder="Ketik nama aktivitas...">
             <div class="flex justify-end gap-2">
                 <button onclick="closeModal('modalAdd')" class="px-5 py-2.5 text-xs font-bold text-gray-400 uppercase">Batal</button>
-                <button onclick="confirmAdd()" class="px-5 py-2.5 text-xs font-bold bg-[#107c41] text-white rounded-xl uppercase shadow-lg shadow-emerald-200">Simpan Aktivitas</button>
+                <button onclick="confirmAdd()" class="px-5 py-2.5 text-xs font-bold bg-[#107c41] text-white rounded-xl uppercase">Simpan</button>
             </div>
         </div>
     </div>
 
-    <!-- Export Menu Modal -->
-    <div id="modalExport" class="modal-overlay">
-        <div class="modal-content">
-            <h3 class="font-extrabold text-gray-800 uppercase text-base mb-4">Ekspor Data</h3>
-            <div class="grid grid-cols-1 gap-2">
-                <button onclick="performExport('xlsx')" class="flex items-center justify-between w-full p-4 bg-emerald-50 border-2 border-emerald-100 rounded-xl hover:bg-emerald-100 transition-all">
-                    <span class="font-bold text-emerald-800">Microsoft Excel (.xlsx)</span>
-                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                </button>
-                <button onclick="performExport('csv')" class="flex items-center justify-between w-full p-4 bg-blue-50 border-2 border-blue-100 rounded-xl hover:bg-blue-100 transition-all">
-                    <span class="font-bold text-blue-800">Standard CSV (.csv)</span>
-                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                </button>
-                <button onclick="performExport('json')" class="flex items-center justify-between w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl hover:bg-gray-100 transition-all">
-                    <span class="font-bold text-gray-800">Backup JSON (.json)</span>
-                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/></svg>
-                </button>
+    <div id="modalDel" class="modal-overlay">
+        <div class="modal-content !max-w-sm">
+            <h3 class="font-extrabold text-gray-800 uppercase text-base mb-2">Hapus Aktivitas?</h3>
+            <p id="delMsg" class="text-xs text-gray-500 mb-4 font-bold"></p>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('modalDel')" class="px-5 py-2.5 text-xs font-bold text-gray-400 uppercase">Batal</button>
+                <button id="confirmDelBtn" class="px-5 py-2.5 text-xs font-bold bg-red-600 text-white rounded-xl uppercase">Ya, Hapus</button>
             </div>
-            <button onclick="closeModal('modalExport')" class="w-full mt-4 p-3 text-xs font-bold text-gray-400 uppercase">Tutup</button>
         </div>
     </div>
 
-    <script>
+    <!-- Application Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         const DEFAULT_ACTS = [
             "Sholat Tahajud", "Tilawah Alquran", "Hafalan Alquran", "Sholat Berjamaah", 
             "Sholat Dhuha", "Olahraga Pagi", "Buat Konten Dakwah", "Update Medsos", 
             "Baca Buku 50 Hal", "Upgrade Tsaqafah", "Bahasa Arab", "Materi Mengajar"
         ];
+        const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
 
-        let currentEmail = localStorage.getItem('tm_user_email') || 'Guest';
+        let currentEmail = localStorage.getItem('tm_save_email') || 'Guest';
         let currentMonth = new Date().getMonth();
-        let db = {};
+        let dbData = {};
         let editMode = false;
+        let isAppReady = false;
 
-        function init() {
-            document.getElementById('user-email').value = currentEmail === 'Guest' ? '' : currentEmail;
-            loadData();
-            switchMonth(currentMonth);
-        }
+        // Firebase State
+        let firebaseDb = null;
+        let authUser = null;
+        let unsubscribeSnapshot = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'taskmaster_2026';
 
-        function loadData() {
-            currentEmail = document.getElementById('user-email').value.trim() || 'Guest';
-            localStorage.setItem('tm_user_email', currentEmail);
-            document.getElementById('data-identity-label').innerText = currentEmail;
-            
-            const saved = localStorage.getItem(`tm_data_v2_${currentEmail}`);
-            if (saved) {
-                db = JSON.parse(saved);
-            } else {
-                db = {};
-                for(let i=0; i<12; i++) {
-                    db[i] = {};
-                    DEFAULT_ACTS.forEach(a => db[i][a] = {});
+        // ==========================================
+        // 1. INITIALIZATION
+        // ==========================================
+        async function initFirebase() {
+            try {
+                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+                if (!firebaseConfig) {
+                    console.warn("Mode Offline Aktif.");
+                    initAppUI();
+                    return;
                 }
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                firebaseDb = getFirestore(app);
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        authUser = user;
+                        if (!isAppReady) { isAppReady = true; initAppUI(); }
+                    }
+                });
+            } catch (error) {
+                console.error("Gagal terhubung ke Cloud:", error);
+                initAppUI();
             }
-            render();
         }
 
-        function handleEmailChange() { loadData(); }
+        function initAppUI() {
+            renderMonthButtons();
+            const emailInput = document.getElementById('user-email');
+            if(emailInput) emailInput.value = currentEmail === 'Guest' ? '' : currentEmail;
+            syncData(); 
+        }
 
-        function toggleEditMode() {
+        function renderMonthButtons() {
+            const container = document.getElementById('month-container');
+            if(!container) return;
+            container.innerHTML = months.map((m, i) => 
+                `<button onclick="switchMonth(${i})" id="btn-month-${i}" class="px-2.5 py-1.5 text-[10px] font-bold rounded-md uppercase transition-all whitespace-nowrap ${i === currentMonth ? 'bg-[#107c41] text-white shadow-md' : 'hover:bg-gray-100'}">${m}</button>`
+            ).join('');
+        }
+
+        // ==========================================
+        // 2. CORE STORAGE LOGIC (SAVE & LOAD)
+        // ==========================================
+        window.handleEmailChange = () => { syncData(); };
+
+        function syncData() {
+            const inputVal = document.getElementById('user-email').value.trim();
+            currentEmail = inputVal || 'Guest';
+            localStorage.setItem('tm_save_email', currentEmail);
+            
+            const label = document.getElementById('data-identity-label');
+            label.innerText = currentEmail;
+
+            // FIRST: Always try to load from LocalStorage to be safe
+            const localSaved = localStorage.getItem(`TM_DATA_LOKAL_${currentEmail}`);
+            if (localSaved) {
+                dbData = JSON.parse(localSaved);
+            } else {
+                initDefaultDb();
+            }
+
+            // SECOND: Override with Cloud if available
+            if (firebaseDb && authUser) {
+                if (unsubscribeSnapshot) unsubscribeSnapshot();
+                const safeId = currentEmail.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'guest_user';
+                const docRef = doc(firebaseDb, 'artifacts', appId, 'public', 'data', 'tm_users', safeId);
+
+                unsubscribeSnapshot = onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        dbData = JSON.parse(docSnap.data().storageData);
+                        renderTable();
+                        updateRawVault();
+                    } else {
+                        saveToCloud(); 
+                    }
+                });
+            }
+            renderTable();
+            updateRawVault();
+        }
+
+        function initDefaultDb() {
+            dbData = {};
+            for(let i=0; i<12; i++) {
+                dbData[i] = {};
+                DEFAULT_ACTS.forEach(a => dbData[i][a] = {});
+            }
+        }
+
+        // AUTO SAVE 
+        async function saveToCloud() {
+            // 1. Simpan ke LocalStorage (Pastikan 100% aman di perangkat)
+            localStorage.setItem(`TM_DATA_LOKAL_${currentEmail}`, JSON.stringify(dbData));
+            updateRawVault();
+            
+            // 2. Simpan ke Firebase
+            if (firebaseDb && authUser) {
+                const safeId = currentEmail.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'guest_user';
+                const docRef = doc(firebaseDb, 'artifacts', appId, 'public', 'data', 'tm_users', safeId);
+                try {
+                    await setDoc(docRef, { email: currentEmail, storageData: JSON.stringify(dbData), updatedAt: new Date().toISOString() });
+                    showToast("☁️ TERSIMPAN DI CLOUD");
+                } catch (e) { console.error("Cloud error", e); showToast("💾 TERSIMPAN LOKAL"); }
+            } else {
+                showToast("💾 TERSIMPAN LOKAL");
+            }
+        }
+
+        // MANUAL SAVE & LOAD
+        window.manualSave = () => {
+            if(!currentEmail) currentEmail = "Guest";
+            localStorage.setItem(`TM_DATA_LOKAL_${currentEmail}`, JSON.stringify(dbData));
+            saveToCloud();
+            alert(`✅ Data berhasil DISIMPAN secara lokal di perangkat ini untuk akun: ${currentEmail}`);
+        };
+
+        window.manualLoad = () => {
+            const saved = localStorage.getItem(`TM_DATA_LOKAL_${currentEmail}`);
+            if (saved) {
+                dbData = JSON.parse(saved);
+                renderTable();
+                updateRawVault();
+                alert(`✅ Data berhasil DIMUAT dari perangkat ini untuk akun: ${currentEmail}`);
+                closeModal('modalStorage');
+            } else {
+                alert(`⚠️ Tidak ada data tersimpan di perangkat ini untuk akun: ${currentEmail}`);
+            }
+        };
+
+        function showToast(msg) {
+            const ind = document.getElementById('save-indicator');
+            if (ind) {
+                ind.innerText = msg;
+                ind.style.opacity = '1';
+                setTimeout(() => ind.style.opacity = '0', 2000);
+            }
+        }
+
+        // ==========================================
+        // 3. TABLE INTERACTION
+        // ==========================================
+        window.switchMonth = (idx) => { currentMonth = idx; renderMonthButtons(); renderTable(); };
+        
+        window.toggleEditMode = () => {
             editMode = !editMode;
-            document.getElementById('label-edit').innerText = editMode ? "Selesai" : "Kelola Daftar";
-            document.getElementById('btn-edit-mode').classList.toggle('bg-red-600', editMode);
-            document.getElementById('btn-edit-mode').classList.toggle('text-white', editMode);
-            render();
-        }
+            document.getElementById('label-edit').innerText = editMode ? "Selesai Mengedit" : "Kelola Daftar";
+            const btn = document.getElementById('btn-edit-mode');
+            btn.classList.toggle('bg-red-600', editMode);
+            btn.classList.toggle('text-white', editMode);
+            renderTable();
+        };
 
-        function switchMonth(idx) {
-            currentMonth = idx;
-            months.forEach((_, i) => {
-                const btn = document.getElementById(`btn-month-${i}`);
-                btn.className = (i === idx) 
-                    ? "px-2.5 py-1.5 text-[10px] font-bold rounded-md bg-[#107c41] text-white uppercase shadow-md" 
-                    : "px-2.5 py-1.5 text-[10px] font-bold rounded-md hover:bg-gray-100 uppercase transition-all";
-            });
-            render();
-        }
+        window.handleCellClick = (act, day) => {
+            if (editMode) return;
+            const states = ['none', 'check', 'cross'];
+            const current = dbData[currentMonth][act][day] || 'none';
+            dbData[currentMonth][act][day] = states[(states.indexOf(current) + 1) % 3];
+            saveToCloud(); 
+            renderTable();
+        };
 
-        function render() {
+        window.renameAct = (old, nw) => {
+            const clean = nw.trim();
+            if (!clean || old === clean) return;
+            dbData[currentMonth][clean] = dbData[currentMonth][old];
+            delete dbData[currentMonth][old];
+            saveToCloud(); renderTable();
+        };
+
+        function renderTable() {
             const h = document.getElementById('header-row');
             const b = document.getElementById('table-body');
             const f = document.getElementById('table-footer');
             if (!h || !b || !f) return;
             
-            // Header: # | Aktifitas | 1-31 | %
             let hHtml = `<th class="sticky-header sticky-no">#</th><th class="sticky-header sticky-col">DAFTAR AKTIVITAS</th>`;
             for (let d = 1; d <= 31; d++) hHtml += `<th class="sticky-header">${d}</th>`;
             hHtml += `<th class="sticky-header sticky-stat-right">%</th>`;
             h.innerHTML = hHtml;
 
-            const monthData = db[currentMonth] || {};
+            const monthData = dbData[currentMonth] || {};
             const activities = Object.keys(monthData);
             let bHtml = '';
             let totalChecks = 0;
@@ -336,7 +512,6 @@
             activities.forEach((act, idx) => {
                 let rowChecks = 0;
                 let cellsHtml = '';
-
                 for (let d = 1; d <= 31; d++) {
                     const status = monthData[act][d] || 'none';
                     let sym = '', cls = '';
@@ -344,15 +519,13 @@
                     if (status === 'cross') { sym = '❌'; cls = 'status-cross animate-pop'; }
                     cellsHtml += `<td><div class="cell-status ${cls}" onclick="handleCellClick('${act}', ${d})">${sym}</div></td>`;
                 }
-
                 const rowPercent = Math.round((rowChecks / 31) * 100);
-
                 bHtml += `<tr>
                     <td class="sticky-no">${idx + 1}</td>
                     <td class="sticky-col group">
                         <div class="flex items-center justify-between overflow-hidden">
-                            <span contenteditable="true" onblur="renameAct('${act}', this.innerText)" class="outline-none truncate font-bold">${act}</span>
-                            ${editMode ? `<button onclick="deleteAct('${act}')" class="text-red-600 font-black px-2 hover:bg-red-50 rounded">×</button>` : ''}
+                            <span contenteditable="true" onblur="renameAct('${act}', this.innerText)" class="outline-none truncate font-bold pr-1 w-full">${act}</span>
+                            ${editMode ? `<button onclick="showDelModal('${act}')" class="text-red-600 font-black px-2 hover:bg-red-50 rounded transition-colors" title="Hapus">×</button>` : ''}
                         </div>
                     </td>
                     ${cellsHtml}
@@ -361,7 +534,6 @@
             });
             b.innerHTML = bHtml;
 
-            // Footer: Σ | Persen Harian
             let fHtml = `<tr class="eval-row"><td class="sticky-no">Σ</td><td class="sticky-col">CAPAIAN HARIAN (%)</td>`;
             let monthlyScoreSum = 0;
             for (let d = 1; d <= 31; d++) {
@@ -372,61 +544,86 @@
             fHtml += `<td class="sticky-stat-right">-</td></tr>`;
             f.innerHTML = fHtml;
 
-            // Stats update
             const finalAvg = Math.round(monthlyScoreSum / 31);
             document.getElementById('total-percent').innerText = finalAvg + "%";
             document.getElementById('qualitative-grade').innerText = (finalAvg >= 90 ? "A (MUMTAZ)" : finalAvg >= 75 ? "B (JAYYID)" : finalAvg >= 50 ? "C (MAQBUL)" : "D (DHAIF)");
             document.getElementById('stat-done').innerText = totalChecks;
         }
 
-        function handleCellClick(act, day) {
-            if (editMode) return;
-            const states = ['none', 'check', 'cross'];
-            const current = db[currentMonth][act][day] || 'none';
-            db[currentMonth][act][day] = states[(states.indexOf(current) + 1) % 3];
-            save(); render();
+        // ==========================================
+        // 4. STORAGE MANAGER & MODALS
+        // ==========================================
+        window.openStorageManager = () => {
+            updateRawVault();
+            document.getElementById('modalStorage').style.display = 'flex';
+        };
+
+        function updateRawVault() {
+            const vault = document.getElementById('rawDataVault');
+            if(vault) vault.value = JSON.stringify(dbData);
         }
 
-        function renameAct(old, nw) {
-            const clean = nw.trim();
-            if (!clean || old === clean) return;
-            db[currentMonth][clean] = db[currentMonth][old];
-            delete db[currentMonth][old];
-            save(); render();
-        }
+        window.copyRawData = () => {
+            const vault = document.getElementById('rawDataVault');
+            vault.select();
+            document.execCommand('copy');
+            alert("Teks data berhasil disalin! Simpan di Notepad atau WA Anda sebagai cadangan.");
+        };
 
-        function showAddModal() { document.getElementById('modalAdd').style.display = 'flex'; document.getElementById('newActivityName').focus(); }
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        window.loadRawData = () => {
+            const vault = document.getElementById('rawDataVault');
+            try {
+                const parsed = JSON.parse(vault.value);
+                if(typeof parsed === 'object') {
+                    dbData = parsed;
+                    saveToCloud();
+                    renderTable();
+                    alert("Data berhasil dipulihkan dari teks!");
+                    closeModal('modalStorage');
+                }
+            } catch(e) {
+                alert("Format teks tidak valid. Pastikan Anda menempelkan kode JSON yang benar.");
+            }
+        };
+
+        window.showAddModal = () => { document.getElementById('modalAdd').style.display = 'flex'; document.getElementById('newActivityName').focus(); };
+        window.closeModal = (id) => { document.getElementById(id).style.display = 'none'; };
         
-        function confirmAdd() {
+        window.confirmAdd = () => {
             const name = document.getElementById('newActivityName').value.trim();
             if (name) {
-                if (!db[currentMonth][name]) db[currentMonth][name] = {};
+                if (!dbData[currentMonth][name]) dbData[currentMonth][name] = {};
                 document.getElementById('newActivityName').value = '';
-                save(); render(); closeModal('modalAdd');
+                saveToCloud(); renderTable(); window.closeModal('modalAdd');
             }
-        }
+        };
 
-        function deleteAct(act) {
-            if(confirm(`Hapus "${act}"?`)) { delete db[currentMonth][act]; save(); render(); }
-        }
+        let pendingDelAct = null;
+        window.showDelModal = (act) => {
+            pendingDelAct = act;
+            document.getElementById('delMsg').innerText = `Anda yakin ingin menghapus "${act}"?`;
+            document.getElementById('modalDel').style.display = 'flex';
+        };
+        document.getElementById('confirmDelBtn').onclick = () => {
+            if(pendingDelAct && dbData[currentMonth][pendingDelAct]) {
+                delete dbData[currentMonth][pendingDelAct];
+                saveToCloud(); renderTable();
+            }
+            window.closeModal('modalDel');
+        };
 
-        function save() {
-            localStorage.setItem(`tm_data_v2_${currentEmail}`, JSON.stringify(db));
-            const ind = document.getElementById('save-indicator');
-            ind.style.opacity = '1';
-            setTimeout(() => ind.style.opacity = '0', 1000);
-        }
+        // EXPORT / IMPORT
+        window.performExport = (type) => {
+            if (type === 'json') {
+                const blob = new Blob([JSON.stringify(dbData, null, 2)], { type: "application/json" });
+                downloadBlob(blob, `Backup_TaskMaster_${currentEmail}.json`);
+                closeModal('modalExport');
+                return;
+            }
 
-        // --- EXPORT / IMPORT LOGIC ---
-        function exportMenu() { document.getElementById('modalExport').style.display = 'flex'; }
-
-        function performExport(type) {
             const monthName = months[currentMonth];
-            const data = db[currentMonth];
+            const data = dbData[currentMonth];
             const rows = [];
-            
-            // Header row
             const header = ["No", "Aktivitas"];
             for(let i=1; i<=31; i++) header.push(i.toString());
             header.push("Persentase (%)");
@@ -444,21 +641,18 @@
                 rows.push(row);
             });
 
-            if(type === 'json') {
-                const blob = new Blob([JSON.stringify(db)], { type: "application/json" });
-                downloadBlob(blob, `Full_Backup_TaskMaster_2026.json`);
-            } else if(type === 'csv') {
+            if(type === 'csv') {
                 const csvContent = rows.map(r => r.join(",")).join("\n");
                 const blob = new Blob([csvContent], { type: "text/csv" });
-                downloadBlob(blob, `Checklist_${monthName}_2026.csv`);
+                downloadBlob(blob, `Checklist_${monthName}_${currentEmail}.csv`);
             } else if(type === 'xlsx') {
                 const ws = XLSX.utils.aoa_to_sheet(rows);
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, monthName);
-                XLSX.writeFile(wb, `Audit_Kinerja_${monthName}_2026.xlsx`);
+                XLSX.writeFile(wb, `Audit_Kinerja_${monthName}_${currentEmail}.xlsx`);
             }
             closeModal('modalExport');
-        }
+        };
 
         function downloadBlob(blob, name) {
             const a = document.createElement('a');
@@ -467,13 +661,16 @@
             a.click();
         }
 
-        function importData(e) {
+        window.importData = (e) => {
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
             
             if(file.name.endsWith('.json')) {
-                reader.onload = (ev) => { db = JSON.parse(ev.target.result); save(); render(); alert("Import JSON Berhasil!"); };
+                reader.onload = (ev) => { 
+                    try { dbData = JSON.parse(ev.target.result); saveToCloud(); renderTable(); alert("IMPORT JSON SUKSES!"); } 
+                    catch(err) { alert("FILE INVALID"); }
+                };
                 reader.readAsText(file);
             } else if(file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
                 reader.onload = (ev) => {
@@ -482,29 +679,28 @@
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                     const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
                     
-                    // Basic parsing logic to fill current month
-                    if(confirm("Impor data Excel ke bulan ini? Data lama di bulan ini akan tertimpa.")) {
-                        db[currentMonth] = {};
-                        jsonData.slice(1).forEach(row => {
-                            if(row[1]) {
-                                const actName = row[1];
-                                db[currentMonth][actName] = {};
-                                for(let d=1; d<=31; d++) {
-                                    const val = row[d+1];
-                                    if(val === 'V' || val === 'v') db[currentMonth][actName][d] = 'check';
-                                    if(val === 'X' || val === 'x') db[currentMonth][actName][d] = 'cross';
-                                }
+                    dbData[currentMonth] = {};
+                    jsonData.slice(1).forEach(row => {
+                        if(row[1]) {
+                            const actName = row[1];
+                            dbData[currentMonth][actName] = {};
+                            for(let d=1; d<=31; d++) {
+                                const val = row[d+1];
+                                if(val === 'V' || val === 'v' || val === '✅') dbData[currentMonth][actName][d] = 'check';
+                                if(val === 'X' || val === 'x' || val === '❌') dbData[currentMonth][actName][d] = 'cross';
                             }
-                        });
-                        save(); render(); alert("Excel Terimpor ke bulan " + months[currentMonth]);
-                    }
+                        }
+                    });
+                    saveToCloud(); renderTable(); alert("EXCEL DIIMPOR!");
+                    closeModal('modalStorage');
                 };
                 reader.readAsArrayBuffer(file);
             }
-        }
+        };
 
-        window.onclick = (e) => { if (e.target.className === 'modal-overlay') e.target.style.display = 'none'; }
-        window.onload = init;
+        window.onclick = (e) => { if (e.target.classList.contains('modal-overlay')) e.target.style.display = 'none'; };
+
+        initFirebase();
     </script>
 </body>
 </html>
