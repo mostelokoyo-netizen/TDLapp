@@ -484,12 +484,89 @@
             renderTable();
         };
 
+        window.handleKeydown = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.target.blur(); // Memicu fungsi simpan (renameAct)
+            }
+        };
+
+        let draggedAct = null;
+
+        window.handleDragStart = (e, act) => {
+            if (!editMode) return;
+            draggedAct = act;
+            e.dataTransfer.effectAllowed = 'move';
+            e.currentTarget.classList.add('opacity-50');
+        };
+
+        window.handleDragOver = (e) => {
+            if (!editMode) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            e.currentTarget.classList.add('bg-emerald-50');
+        };
+
+        window.handleDragLeave = (e) => {
+            e.currentTarget.classList.remove('bg-emerald-50');
+        };
+
+        window.handleDrop = (e, targetAct) => {
+            if (!editMode || !draggedAct || draggedAct === targetAct) {
+                e.currentTarget.classList.remove('bg-emerald-50');
+                return;
+            }
+            e.preventDefault();
+            e.currentTarget.classList.remove('bg-emerald-50');
+
+            const monthData = dbData[currentMonth];
+            const keys = Object.keys(monthData);
+            const draggedIdx = keys.indexOf(draggedAct);
+            const targetIdx = keys.indexOf(targetAct);
+
+            // Menggeser posisi urutan dalam array
+            keys.splice(draggedIdx, 1);
+            keys.splice(targetIdx, 0, draggedAct);
+
+            // Membangun ulang objek agar urutannya tersimpan dengan benar di sistem
+            const newData = {};
+            keys.forEach(k => {
+                newData[k] = monthData[k];
+            });
+            dbData[currentMonth] = newData;
+
+            saveToCloud();
+            renderTable();
+        };
+
+        window.handleDragEnd = (e) => {
+            e.currentTarget.classList.remove('opacity-50');
+            draggedAct = null;
+        };
+
         window.renameAct = (old, nw) => {
             const clean = nw.trim();
-            if (!clean || old === clean) return;
-            dbData[currentMonth][clean] = dbData[currentMonth][old];
-            delete dbData[currentMonth][old];
-            saveToCloud(); renderTable();
+            if (!clean || old === clean) {
+                renderTable(); // Kembalikan teks jika kosong/tidak berubah
+                return;
+            }
+            if (dbData[currentMonth][clean]) {
+                alert("Nama aktivitas sudah ada di daftar!");
+                renderTable();
+                return;
+            }
+            
+            // Buat ulang objek untuk mempertahankan urutan letak saat ganti nama
+            const keys = Object.keys(dbData[currentMonth]);
+            const newData = {};
+            keys.forEach(k => {
+                if(k === old) newData[clean] = dbData[currentMonth][old];
+                else newData[k] = dbData[currentMonth][k];
+            });
+            
+            dbData[currentMonth] = newData;
+            saveToCloud(); 
+            renderTable();
         };
 
         function renderTable() {
@@ -520,11 +597,17 @@
                     cellsHtml += `<td><div class="cell-status ${cls}" onclick="handleCellClick('${act}', ${d})">${sym}</div></td>`;
                 }
                 const rowPercent = Math.round((rowChecks / 31) * 100);
-                bHtml += `<tr>
+                
+                // Menambahkan logic drag-and-drop dan visual box edit
+                bHtml += `<tr ${editMode ? `draggable="true" ondragstart="handleDragStart(event, '${act}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '${act}')" ondragend="handleDragEnd(event)"` : ''} class="transition-colors">
                     <td class="sticky-no">${idx + 1}</td>
                     <td class="sticky-col group">
-                        <div class="flex items-center justify-between overflow-hidden">
-                            <span contenteditable="true" onblur="renameAct('${act}', this.innerText)" class="outline-none truncate font-bold pr-1 w-full">${act}</span>
+                        <div class="flex items-center justify-between overflow-hidden gap-1">
+                            ${editMode ? `<div class="cursor-move text-gray-400 hover:text-[#107c41] px-1" title="Tahan & Geser Atas/Bawah">⋮⋮</div>` : ''}
+                            <span contenteditable="${editMode ? 'true' : 'false'}" 
+                                  onblur="renameAct('${act}', this.innerText)" 
+                                  onkeydown="handleKeydown(event)"
+                                  class="outline-none truncate font-bold w-full ${editMode ? 'bg-white border border-emerald-300 p-1 rounded shadow-inner cursor-text text-[#107c41]' : 'pr-1'}">${act}</span>
                             ${editMode ? `<button onclick="showDelModal('${act}')" class="text-red-600 font-black px-2 hover:bg-red-50 rounded transition-colors" title="Hapus">×</button>` : ''}
                         </div>
                     </td>
