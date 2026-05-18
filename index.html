@@ -168,6 +168,13 @@
             <button onclick="performExport('json')" class="bg-purple-700 hover:bg-purple-600 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-1 border border-purple-500 whitespace-nowrap">
                 📥 Unduh JSON
             </button>
+            <label class="bg-indigo-700 hover:bg-indigo-600 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-1 border border-indigo-500 whitespace-nowrap cursor-pointer">
+                <input type="file" class="hidden" accept=".json" onchange="importData(event)">
+                📤 Impor JSON
+            </label>
+            <button onclick="shareToDrive()" class="bg-yellow-600 hover:bg-yellow-500 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-1 border border-yellow-500 whitespace-nowrap">
+                ☁️ Simpan ke Drive
+            </button>
             <button onclick="manualSave()" class="bg-emerald-700 hover:bg-emerald-600 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-1 border border-emerald-500 whitespace-nowrap">
                 💾 Simpan
             </button>
@@ -237,6 +244,9 @@
                 <button onclick="manualLoad()" class="bg-blue-100 hover:bg-blue-200 text-blue-800 p-3 rounded-lg font-bold text-sm border border-blue-200 transition-all">
                     📂 Muat Data Terakhir
                 </button>
+                <button onclick="shareToDrive()" class="col-span-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 p-3 rounded-lg font-bold text-sm border border-yellow-200 transition-all">
+                    ☁️ Kirim ke Google Drive / WhatsApp
+                </button>
             </div>
 
             <!-- Export Import Files -->
@@ -286,6 +296,26 @@
             <div class="flex justify-end gap-2">
                 <button onclick="closeModal('modalDel')" class="px-5 py-2.5 text-xs font-bold text-gray-400 uppercase">Batal</button>
                 <button id="confirmDelBtn" class="px-5 py-2.5 text-xs font-bold bg-red-600 text-white rounded-xl uppercase">Ya, Hapus</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Drive Info -->
+    <div id="modalDrive" class="modal-overlay">
+        <div class="modal-content !max-w-md">
+            <h3 class="font-extrabold text-gray-800 uppercase text-lg mb-2 flex items-center gap-2">
+                ☁️ Simpan ke Drive
+            </h3>
+            <div class="bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-lg text-xs mb-4">
+                Demi keamanan & privasi, aplikasi tidak meminta akses login Google Anda secara langsung.
+            </div>
+            <ul class="text-xs text-gray-600 list-decimal pl-4 mb-4 space-y-2">
+                <li><b>Di HP/Tablet:</b> Akan muncul menu "Share/Bagikan" bawaan HP. Pilih ikon <b>Google Drive</b>.</li>
+                <li><b>Di PC/Laptop:</b> File backup (.json) akan otomatis <b>diunduh</b>. Anda bisa menyimpan file tersebut ke Google Drive secara manual.</li>
+            </ul>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('modalDrive')" class="px-4 py-2 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-lg transition-all uppercase">Batal</button>
+                <button onclick="executeShareToDrive()" class="px-4 py-2 text-xs font-bold bg-yellow-500 text-white hover:bg-yellow-600 rounded-lg shadow-md transition-all uppercase">Mengerti & Lanjutkan</button>
             </div>
         </div>
     </div>
@@ -524,11 +554,9 @@
             const draggedIdx = keys.indexOf(draggedAct);
             const targetIdx = keys.indexOf(targetAct);
 
-            // Menggeser posisi urutan dalam array
             keys.splice(draggedIdx, 1);
             keys.splice(targetIdx, 0, draggedAct);
 
-            // Membangun ulang objek agar urutannya tersimpan dengan benar di sistem
             const newData = {};
             keys.forEach(k => {
                 newData[k] = monthData[k];
@@ -547,7 +575,7 @@
         window.renameAct = (old, nw) => {
             const clean = nw.trim();
             if (!clean || old === clean) {
-                renderTable(); // Kembalikan teks jika kosong/tidak berubah
+                renderTable(); 
                 return;
             }
             if (dbData[currentMonth][clean]) {
@@ -556,7 +584,6 @@
                 return;
             }
             
-            // Buat ulang objek untuk mempertahankan urutan letak saat ganti nama
             const keys = Object.keys(dbData[currentMonth]);
             const newData = {};
             keys.forEach(k => {
@@ -598,7 +625,6 @@
                 }
                 const rowPercent = Math.round((rowChecks / 31) * 100);
                 
-                // Menambahkan logic drag-and-drop dan visual box edit
                 bHtml += `<tr ${editMode ? `draggable="true" ondragstart="handleDragStart(event, '${act}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '${act}')" ondragend="handleDragEnd(event)"` : ''} class="transition-colors">
                     <td class="sticky-no">${idx + 1}</td>
                     <td class="sticky-col group">
@@ -669,8 +695,39 @@
             }
         };
 
+        window.shareToDrive = () => {
+            document.getElementById('modalDrive').style.display = 'flex';
+        };
+
+        window.executeShareToDrive = async () => {
+            closeModal('modalDrive');
+            const jsonStr = JSON.stringify(dbData, null, 2);
+            const fileName = `Backup_TaskMaster_${currentEmail}.json`;
+            const file = new File([jsonStr], fileName, { type: "application/json" });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Backup TaskMaster 2026',
+                        text: 'Berikut adalah file backup data TaskMaster saya.'
+                    });
+                } catch (error) {
+                    console.log('Batal membagikan', error);
+                }
+            } else {
+                downloadBlob(file, fileName);
+                showToast("📥 File Terunduh!");
+            }
+        };
+
         window.showAddModal = () => { document.getElementById('modalAdd').style.display = 'flex'; document.getElementById('newActivityName').focus(); };
-        window.closeModal = (id) => { document.getElementById(id).style.display = 'none'; };
+        
+        // Pengecekan elemen null ditambahkan untuk mencegah error
+        window.closeModal = (id) => { 
+            const modalEl = document.getElementById(id);
+            if(modalEl) modalEl.style.display = 'none'; 
+        };
         
         window.confirmAdd = () => {
             const name = document.getElementById('newActivityName').value.trim();
@@ -700,7 +757,7 @@
             if (type === 'json') {
                 const blob = new Blob([JSON.stringify(dbData, null, 2)], { type: "application/json" });
                 downloadBlob(blob, `Backup_TaskMaster_${currentEmail}.json`);
-                closeModal('modalExport');
+                closeModal('modalStorage'); // Telah diperbaiki menjadi modalStorage
                 return;
             }
 
@@ -734,7 +791,7 @@
                 XLSX.utils.book_append_sheet(wb, ws, monthName);
                 XLSX.writeFile(wb, `Audit_Kinerja_${monthName}_${currentEmail}.xlsx`);
             }
-            closeModal('modalExport');
+            closeModal('modalStorage'); // Telah diperbaiki menjadi modalStorage
         };
 
         function downloadBlob(blob, name) {
@@ -779,6 +836,8 @@
                 };
                 reader.readAsArrayBuffer(file);
             }
+            // Reset input agar bisa import file yang sama lagi
+            e.target.value = '';
         };
 
         window.onclick = (e) => { if (e.target.classList.contains('modal-overlay')) e.target.style.display = 'none'; };
